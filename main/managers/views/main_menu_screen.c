@@ -1,4 +1,4 @@
-#include "ghost_poweroff.h"
+#include "managers/ghost_poweroff.h"
 #include "managers/views/main_menu_screen.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
@@ -17,6 +17,7 @@ typedef struct {
     lv_color_t border_color;
 } menu_item_t;
 
+// Menu items including Power Off (no icon)
 static menu_item_t menu_items[] = {
     {"BLE", &bluetooth},
     {"WiFi", &wifi},
@@ -102,26 +103,35 @@ static void select_menu_item(int index, bool slide_left) {
 static void handle_menu_item_selection(int item_index) {
     switch (item_index) {
         case 0:
+            printf("BLE selected\n");
             SelectedMenuType = OT_Bluetooth;
             display_manager_switch_view(&options_menu_view);
             break;
 
         case 1:
+            printf("Wi-Fi selected\n");
             SelectedMenuType = OT_Wifi;
             display_manager_switch_view(&options_menu_view);
             break;
 
         case 2:
+            printf("GPS selected\n");
             SelectedMenuType = OT_GPS;
             display_manager_switch_view(&options_menu_view);
             break;
 
         case 3:
+            printf("Apps selected\n");
             display_manager_switch_view(&apps_menu_view);
             break;
 
-        case 4:
+        case 4:  // Power Off
+            printf("Power Off selected\n");
             ghost_poweroff();
+            break;
+
+        default:
+            printf("Unknown menu item\n");
             break;
     }
 }
@@ -129,7 +139,6 @@ static void handle_menu_item_selection(int item_index) {
 static void menu_item_event_handler(InputEvent *event) {
     if (event->type == INPUT_TYPE_JOYSTICK) {
         int btn = event->data.joystick_index;
-
         if (btn == 0) select_menu_item(selected_item_index - 1, true);
         if (btn == 3) select_menu_item(selected_item_index + 1, false);
         if (btn == 1) handle_menu_item_selection(selected_item_index);
@@ -142,7 +151,6 @@ void main_menu_create(void) {
 
     menu_container = lv_obj_create(lv_scr_act());
     main_menu_view.root = menu_container;
-
     lv_obj_set_size(menu_container, LV_HOR_RES, LV_VER_RES);
     lv_obj_set_style_bg_opa(menu_container, LV_OPA_TRANSP, 0);
     lv_obj_set_scrollbar_mode(menu_container, LV_SCROLLBAR_MODE_OFF);
