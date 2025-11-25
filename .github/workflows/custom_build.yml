@@ -1,0 +1,76 @@
+name: Custom Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      board_type:
+        description: 'ESP32 Board Type'
+        required: true
+        type: choice
+        options:
+          - esp32s3
+
+      display_type:
+        description: 'Display Type'
+        required: true
+        type: choice
+        options:
+          - none
+
+      flash_size:
+        description: 'Flash Size'
+        required: true
+        type: choice
+        options:
+          - 4MB
+          - 8MB
+          - 16MB
+        default: '4MB'
+
+jobs:
+  build:
+    name: Build Firmware
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install ESP-IDF
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget git flex bison gperf python3-pip python3-setuptools cmake ninja-build ccache libffi-dev libssl-dev dfu-util
+          git clone -b v5.3.1 --depth 1 https://github.com/espressif/esp-idf.git ~/esp-idf
+          ~/esp-idf/install.sh
+
+      - name: Prepare sdkconfig.defaults
+        run: |
+          cp configs/sdkconfig.default.esp32s3 sdkconfig.defaults
+          echo "CONFIG_ESPTOOLPY_FLASHSIZE=\"${{ github.event.inputs.flash_size }}\"" >> sdkconfig.defaults
+
+      - name: Export IDF
+        run: |
+          . ~/esp-idf/export.sh
+          export IDF_TARGET=esp32s3
+          echo "IDF_TARGET=esp32s3" >> $GITHUB_ENV
+
+      - name: Build Project
+        env:
+          SDKCONFIG_DEFAULTS: "sdkconfig.defaults"
+        run: |
+          . ~/esp-idf/export.sh
+          idf.py clean
+          idf.py build
+
+      - name: Package output
+        run: |
+          mkdir -p output
+          cp build/*.bin output/ || true
+          cp build/partition_table/partition-table.bin output/ || true
+          zip -r firmware.zip output
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: firmware.zip
