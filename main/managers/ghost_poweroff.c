@@ -4,6 +4,7 @@
 #include "freertos/task.h"
 
 void ghost_poweroff(void) {
+    // Configure GPIO 15 as output (power control pin on T-Display S3)
     gpio_config_t io_conf = {
         .pin_bit_mask = 1ULL << 15,
         .mode = GPIO_MODE_OUTPUT,
@@ -13,9 +14,13 @@ void ghost_poweroff(void) {
     };
 
     gpio_config(&io_conf);
-    gpio_set_level(15, 0);  // Turn off display power
 
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // Turn off display / power rail
+    gpio_set_level(15, 0);
 
+    // Small delay to ensure shutdown happens
+    vTaskDelay(pdMS_TO_TICKS(120));
+
+    // Enter deep sleep (board will fully turn off)
     esp_deep_sleep_start();
 }
