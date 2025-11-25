@@ -1,3 +1,4 @@
+#include "ghost_poweroff.h"
 #include "managers/views/main_menu_screen.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
