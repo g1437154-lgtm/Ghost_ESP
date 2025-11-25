@@ -12,6 +12,11 @@
 #endif
 #include <esp_log.h>
 
+// ADDED FOR POWER OFF / DEEP SLEEP
+#include "driver/gpio.h"
+#include "esp_sleep.h"
+#include "freertos/task.h"
+
 #ifdef CONFIG_WITH_ETHERNET
 // TODO
 #endif
@@ -21,6 +26,32 @@
 #endif
 
 int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) { return 0; }
+
+
+// =======================================================
+// POWER OFF FUNCTION (Deep Sleep + Display Power Off)
+// =======================================================
+void ghost_poweroff(void) {
+
+    // Turn off the display backlight (GPIO 15 on T-Display S3)
+    gpio_config_t io_conf = {
+        .pin_bit_mask = 1ULL << 15,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_down_en = 0,
+        .pull_up_en = 0,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+
+    gpio_config(&io_conf);
+    gpio_set_level(15, 0);   // DISPLAY OFF
+
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    // Enter deep sleep - wakes only when RST is pressed
+    esp_deep_sleep_start();
+}
+// =======================================================
+
 
 void app_main(void) {
     serial_manager_init();
@@ -39,13 +70,9 @@ void app_main(void) {
 #endif
 
     command_init();
-
     register_commands();
-
     settings_init(&G_Settings);
-
     ap_manager_init();
-
     esp_err_t err = sd_card_init();
 
 #ifdef CONFIG_WITH_SCREEN
@@ -85,7 +112,7 @@ void app_main(void) {
         xTaskCreate(rainbow_task, "Rainbow Task", 8192, &rgb_manager, 1, &rgb_effect_task_handle);
     }
 #endif
-#ifdef CONFIG_RED_RGB_PIN &&CONFIG_GREEN_RGB_PIN &&CONFIG_BLUE_RGB_PIN
+#ifdef CONFIG_RED_RGB_PIN && CONFIG_GREEN_RGB_PIN && CONFIG_BLUE_RGB_PIN
     rgb_manager_init(&rgb_manager, GPIO_NUM_NC, 1, LED_PIXEL_FORMAT_GRB, LED_MODEL_WS2812,
                      CONFIG_RED_RGB_PIN, CONFIG_GREEN_RGB_PIN, CONFIG_BLUE_RGB_PIN);
     if (settings_get_rgb_mode(&G_Settings) == 1) {
