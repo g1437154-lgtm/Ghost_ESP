@@ -4,51 +4,36 @@ on:
   workflow_dispatch:
     inputs:
       board_type:
-        description: "ESP32 Board Type"
+        description: 'ESP32 Board Type'
         required: true
         type: choice
         options:
-          - esp32
-          - esp32s2
           - esp32s3
-          - esp32c3
-          - esp32c6
 
       display_type:
-        description: "Display Type"
+        description: 'Display Type'
         required: true
         type: choice
         options:
-          - custom
-          - none
-          - MarauderV4_FlipperHub
-          - MarauderV6_AwokDual
-          - AwokMini
-          - ESP32-S3-Cardputer
-          - LillyGoTWatch_S3
-          - CYD2USB
-          - CYDMicroUSB
-          - CYDDualUSB
-          - CYD2USB2.4_Inch
-          - Waveshare_LCD
-          - Crowtech_LCD
+          - T-Display-S3
 
       flash_size:
-        description: "Flash Size"
+        description: 'Flash Size'
         required: true
         type: choice
         options:
           - 4MB
           - 8MB
           - 16MB
-        default: "4MB"
+        default: '8MB'
 
 jobs:
   build:
+    name: Build Firmware
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Install ESP-IDF
@@ -60,30 +45,31 @@ jobs:
 
       - name: Prepare sdkconfig.defaults
         run: |
-          cp configs/sdkconfig.default.${{ github.event.inputs.board_type }} sdkconfig.defaults
+          cp configs/sdkconfig.defaults.esp32s3 sdkconfig.defaults
           echo "CONFIG_ESPTOOLPY_FLASHSIZE=\"${{ github.event.inputs.flash_size }}\"" >> sdkconfig.defaults
 
       - name: Export IDF
         run: |
           . ~/esp-idf/export.sh
-          echo "IDF_TARGET=${{ github.event.inputs.board_type }}" >> $GITHUB_ENV
+          export IDF_TARGET=esp32s3
+          echo "IDF_TARGET=esp32s3" >> $GITHUB_ENV
 
-      - name: Build
+      - name: Build Project
         env:
-          SDKCONFIG_DEFAULTS: sdkconfig.defaults
+          SDKCONFIG_DEFAULTS: "sdkconfig.defaults"
         run: |
           . ~/esp-idf/export.sh
           idf.py clean
           idf.py build
 
-      - name: Package
+      - name: Package output
         run: |
-          mkdir output
+          mkdir -p output
           cp build/*.bin output/ || true
-          cp build/partition_table/*.bin output/ || true
-          zip firmware.zip output -r
+          cp build/partition_table/partition-table.bin output/ || true
+          zip -r firmware.zip output
 
-      - name: Upload Artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: firmware
