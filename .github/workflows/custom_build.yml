@@ -15,7 +15,18 @@ on:
         required: true
         type: choice
         options:
-          - T-Display-S3
+          - none
+          - custom
+
+      screen_width:
+        description: 'Screen Width (only if custom)'
+        required: false
+        type: string
+
+      screen_height:
+        description: 'Screen Height (only if custom)'
+        required: false
+        type: string
 
       flash_size:
         description: 'Flash Size'
@@ -25,7 +36,7 @@ on:
           - 4MB
           - 8MB
           - 16MB
-        default: '8MB'
+        default: '4MB'
 
 jobs:
   build:
@@ -45,7 +56,14 @@ jobs:
 
       - name: Prepare sdkconfig.defaults
         run: |
-          cp configs/sdkconfig.defaults.esp32s3 sdkconfig.defaults
+          cp configs/sdkconfig.default.esp32s3 sdkconfig.defaults
+
+          if [ "${{ github.event.inputs.display_type }}" = "custom" ]; then
+            echo "CONFIG_WITH_SCREEN=y" >> sdkconfig.defaults
+            echo "CONFIG_TFT_WIDTH=${{ github.event.inputs.screen_width }}" >> sdkconfig.defaults
+            echo "CONFIG_TFT_HEIGHT=${{ github.event.inputs.screen_height }}" >> sdkconfig.defaults
+          fi
+
           echo "CONFIG_ESPTOOLPY_FLASHSIZE=\"${{ github.event.inputs.flash_size }}\"" >> sdkconfig.defaults
 
       - name: Export IDF
